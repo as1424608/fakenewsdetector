@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Real-Time Fake News Detector</title>
+  <meta http-equiv="refresh" content="60">
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:24px auto;padding:10px}
+    .box{background:#fff;border:1px solid #eee;padding:14px;border-radius:8px;margin-top:12px}
+    .ml {background:#fff6f6;border-left:6px solid #f44336}
+    .verify {background:#f6fff6;border-left:6px solid #2e7d32}
+    .uncertain {background:#fffaf0;border-left:6px solid #f0ad4e}
+    .final {padding:12px;margin-top:12px;border-radius:6px}
+    .real {color:#1b7f2a;font-weight:700}
+    .fake {color:#c71f1f;font-weight:700}
+  </style>
+</head>
+<body>
+  <h1>📰 Real-Time Fake News Detector</h1>
+  <p>Paste a headline or short article text. Page auto-refreshes every 60s (live feed uses NewsAPI).</p>
+
+  <div class="box">
+    <form method="post" action="/">
+      <input type="text" name="headline" placeholder="Enter headline or article..." value="{{ user_input or '' }}" style="width:82%;padding:8px" required>
+      <button type="submit" style="padding:8px 12px">Check</button>
+    </form>
+  </div>
+
+  {% if result %}
+    <div class="box ml">
+      <h3>🤖 ML model</h3>
+      <p>Prediction: <span class="{{ 'real' if result.ml_label=='REAL' else 'fake' }}">{{ result.ml_label }}</span>
+      {% if result.ml_confidence is not none %} — confidence: {{ (result.ml_confidence * 100) | round(1) }}%{% endif %}</p>
+    </div>
+
+    <div class="box verify">
+      <h3>🛡️ Semantic cross-check (news archive)</h3>
+      <p>{{ result.verify_msg }}</p>
+      {% if result.verify_detail and result.verify_detail.status == 'ok' %}
+        <p><a href="{{ result.verify_detail.best_url }}" target="_blank">Open source article</a></p>
+      {% endif %}
+    </div>
+
+    <div class="box final">
+      <h3>🔎 Final verdict</h3>
+      <p><strong>{{ result.final.verdict }}</strong>
+      {% if result.final.confidence is not none %} — combined/confidence: {{ (result.final.confidence * 100) | round(1) }}%{% endif %}</p>
+    </div>
+  {% endif %}
+</body>
+</html>
