@@ -2,50 +2,516 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Real-Time Fake News Detector</title>
+  <title>FakeShield — Real-Time News Detector</title>
   <meta http-equiv="refresh" content="60">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:24px auto;padding:10px}
-    .box{background:#fff;border:1px solid #eee;padding:14px;border-radius:8px;margin-top:12px}
-    .ml {background:#fff6f6;border-left:6px solid #f44336}
-    .verify {background:#f6fff6;border-left:6px solid #2e7d32}
-    .uncertain {background:#fffaf0;border-left:6px solid #f0ad4e}
-    .final {padding:12px;margin-top:12px;border-radius:6px}
-    .real {color:#1b7f2a;font-weight:700}
-    .fake {color:#c71f1f;font-weight:700}
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #111318;
+      --surface2:  #181c24;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.13);
+      --text:      #e8eaf0;
+      --muted:     #6b7280;
+      --accent:    #4f8ef7;
+      --accent2:   #7c3aed;
+      --real:      #22c55e;
+      --fake:      #ef4444;
+      --warn:      #f59e0b;
+      --real-bg:   rgba(34,197,94,0.08);
+      --fake-bg:   rgba(239,68,68,0.08);
+      --warn-bg:   rgba(245,158,11,0.08);
+      --real-bdr:  rgba(34,197,94,0.3);
+      --fake-bdr:  rgba(239,68,68,0.3);
+      --warn-bdr:  rgba(245,158,11,0.3);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      min-height: 100vh;
+      padding: 0 16px 60px;
+      background-image:
+        radial-gradient(ellipse 80% 40% at 50% -10%, rgba(79,142,247,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 30% at 90% 80%, rgba(124,58,237,0.08) 0%, transparent 60%);
+    }
+
+    /* ── Header ── */
+    header {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 0 32px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 26px;
+      letter-spacing: -0.5px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .live-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--real);
+      background: var(--real-bg);
+      border: 1px solid var(--real-bdr);
+      padding: 4px 10px;
+      border-radius: 99px;
+      letter-spacing: 0.5px;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px;
+      background: var(--real);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ── Main container ── */
+    .container { max-width: 780px; margin: 0 auto; }
+
+    /* ── Search box ── */
+    .search-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+
+    .search-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: var(--accent); }
+
+    .check-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .check-btn:hover  { opacity: 0.88; }
+    .check-btn:active { transform: scale(0.97); }
+
+    .refresh-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Result cards ── */
+    .results { display: flex; flex-direction: column; gap: 14px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      animation: slideUp 0.35s ease both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card:nth-child(2) { animation-delay: 0.07s; }
+    .card:nth-child(3) { animation-delay: 0.14s; }
+    .card:nth-child(4) { animation-delay: 0.21s; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title span { font-size: 16px; }
+
+    /* ── Confidence bar ── */
+    .conf-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .conf-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .conf-track {
+      flex: 1;
+      height: 5px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .conf-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+
+    .conf-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    /* ── Verdict pill ── */
+    .verdict-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+    }
+
+    .pill-real     { background: var(--real-bg);  border: 1px solid var(--real-bdr);  color: var(--real); }
+    .pill-fake     { background: var(--fake-bg);  border: 1px solid var(--fake-bdr);  color: var(--fake); }
+    .pill-warn     { background: var(--warn-bg);  border: 1px solid var(--warn-bdr);  color: var(--warn); }
+    .pill-uncertain{ background: rgba(107,114,128,0.1); border: 1px solid rgba(107,114,128,0.25); color: var(--muted); }
+
+    /* ── Final card special styling ── */
+    .final-card {
+      border-width: 1.5px;
+      padding: 22px 24px;
+    }
+
+    .final-card.is-real   { border-color: var(--real-bdr);  background: linear-gradient(135deg, var(--real-bg), var(--surface)); }
+    .final-card.is-fake   { border-color: var(--fake-bdr);  background: linear-gradient(135deg, var(--fake-bg), var(--surface)); }
+    .final-card.is-warn   { border-color: var(--warn-bdr);  background: linear-gradient(135deg, var(--warn-bg), var(--surface)); }
+
+    .final-verdict-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+
+    .final-reason {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* ── Source link ── */
+    .source-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--accent);
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      transition: opacity 0.2s;
+    }
+    .source-link:hover { opacity: 0.7; text-decoration: underline; }
+
+    /* ── Wiki / Fact-check badges ── */
+    .extra-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .check-badge {
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .check-badge.contradiction { border-color: var(--fake-bdr); color: var(--fake); background: var(--fake-bg); }
+    .check-badge.supported     { border-color: var(--real-bdr); color: var(--real); background: var(--real-bg); }
+    .check-badge.factfalse     { border-color: var(--fake-bdr); color: var(--fake); background: var(--fake-bg); }
+
+    /* ── Body text ── */
+    .body-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .muted-text { color: var(--muted); font-size: 13px; }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+    /* ── Footer ── */
+    footer {
+      max-width: 780px;
+      margin: 40px auto 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
   </style>
 </head>
 <body>
-  <h1>📰 Real-Time Fake News Detector</h1>
-  <p>Paste a headline or short article text. Page auto-refreshes every 60s (live feed uses NewsAPI).</p>
 
-  <div class="box">
-    <form method="post" action="/">
-      <input type="text" name="headline" placeholder="Enter headline or article..." value="{{ user_input or '' }}" style="width:82%;padding:8px" required>
-      <button type="submit" style="padding:8px 12px">Check</button>
-    </form>
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🛡️</div>
+      FakeShield
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE · AUTO-REFRESH 60s
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Search -->
+    <div class="search-card">
+      <div class="search-label">Paste a headline, claim, or short article text below</div>
+      <form method="post" action="/">
+        <div class="search-row">
+          <input
+            class="search-input"
+            type="text"
+            name="headline"
+            placeholder="e.g. Aman is the Prime Minister of India…"
+            value="{{ user_input or '' }}"
+            required
+            autocomplete="off"
+          >
+          <button class="check-btn" type="submit">Analyse →</button>
+        </div>
+        <div class="refresh-note">⟳ Page auto-refreshes every 60s · powered by NewsAPI + SBERT + Wikipedia</div>
+      </form>
+    </div>
+
+    {% if result %}
+    <div class="results">
+
+      <!-- ML Model card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>🤖</span> ML Model</div>
+          {% if result.ml_label == 'REAL' %}
+            <div class="verdict-pill pill-real">● REAL</div>
+          {% else %}
+            <div class="verdict-pill pill-fake">● FAKE</div>
+          {% endif %}
+        </div>
+        {% if result.ml_confidence is not none %}
+        <div class="conf-row">
+          <div class="conf-label">Confidence</div>
+          <div class="conf-track">
+            <div class="conf-fill" style="width:{{ (result.ml_confidence * 100) | round(1) }}%; background:{{ '#22c55e' if result.ml_label=='REAL' else '#ef4444' }};"></div>
+          </div>
+          <div class="conf-value" style="color:{{ '#22c55e' if result.ml_label=='REAL' else '#ef4444' }}">
+            {{ (result.ml_confidence * 100) | round(1) }}%
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Semantic cross-check card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>🔍</span> Semantic Cross-Check</div>
+          {% if result.verify_ok %}
+            <div class="verdict-pill pill-real">✓ Verified</div>
+          {% else %}
+            <div class="verdict-pill pill-warn">~ Unverified</div>
+          {% endif %}
+        </div>
+        <div class="body-text">{{ result.verify_msg }}</div>
+        {% if result.verify_detail and result.verify_detail.status == 'ok' %}
+          <a class="source-link" href="{{ result.verify_detail.best_url }}" target="_blank">
+            ↗ Open source article
+          </a>
+          {% if result.verify_detail.score is not none %}
+          <div class="conf-row" style="margin-top:14px">
+            <div class="conf-label">Similarity</div>
+            <div class="conf-track">
+              <div class="conf-fill" style="width:{{ (result.verify_detail.score * 100) | round(1) }}%; background: #4f8ef7;"></div>
+            </div>
+            <div class="conf-value" style="color:#4f8ef7">
+              {{ (result.verify_detail.score * 100) | round(1) }}%
+            </div>
+          </div>
+          {% endif %}
+        {% endif %}
+      </div>
+
+      <!-- Wikipedia + Fact Check card (only show if data exists) -->
+      {% if result.wiki_check or result.fact_check %}
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>📚</span> Entity & Fact Verification</div>
+        </div>
+        <div class="extra-checks">
+          {% if result.wiki_check %}
+            {% if result.wiki_check.status == 'CONTRADICTION' %}
+              <div class="check-badge contradiction">✕ Wikipedia: {{ result.wiki_check.detail }}</div>
+            {% elif result.wiki_check.status == 'SUPPORTED' %}
+              <div class="check-badge supported">✓ Wikipedia: {{ result.wiki_check.detail }}</div>
+            {% else %}
+              <div class="check-badge">~ Wikipedia: {{ result.wiki_check.detail }}</div>
+            {% endif %}
+          {% endif %}
+          {% if result.fact_check and result.fact_check.rating is defined %}
+            {% set r = result.fact_check.rating | lower %}
+            {% if 'false' in r or 'fake' in r or 'mislead' in r %}
+              <div class="check-badge factfalse">✕ Fact-check: {{ result.fact_check.rating }} — {{ result.fact_check.publisher }}</div>
+            {% else %}
+              <div class="check-badge supported">✓ Fact-check: {{ result.fact_check.rating }} — {{ result.fact_check.publisher }}</div>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% if result.wiki_check and result.wiki_check.summary %}
+          <hr>
+          <div class="muted-text" style="margin-top:4px">{{ result.wiki_check.summary }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Final verdict card -->
+      {% set vl = result.final.verdict | lower %}
+      {% if 'fake' in vl %}
+        {% set fclass = 'is-fake' %}{% set pclass = 'pill-fake' %}{% set fcolor = '#ef4444' %}
+      {% elif 'real' in vl %}
+        {% set fclass = 'is-real' %}{% set pclass = 'pill-real' %}{% set fcolor = '#22c55e' %}
+      {% else %}
+        {% set fclass = 'is-warn' %}{% set pclass = 'pill-warn' %}{% set fcolor = '#f59e0b' %}
+      {% endif %}
+
+      <div class="card final-card {{ fclass }}">
+        <div class="card-header">
+          <div class="card-title"><span>🔎</span> Final Verdict</div>
+          {% if result.final.veto %}
+            <div class="verdict-pill pill-fake" style="font-size:11px">⚠ HARD VETO</div>
+          {% endif %}
+        </div>
+        <div class="final-verdict-text" style="color:{{ fcolor }}">
+          {{ result.final.verdict }}
+        </div>
+        {% if result.final.reason %}
+          <div class="final-reason">{{ result.final.reason }}</div>
+        {% endif %}
+        {% if result.final.confidence is not none %}
+        <div class="conf-row" style="margin-top:14px">
+          <div class="conf-label">Combined confidence</div>
+          <div class="conf-track">
+            <div class="conf-fill" style="width:{{ result.final.confidence }}%; background:{{ fcolor }};"></div>
+          </div>
+          <div class="conf-value" style="color:{{ fcolor }}">
+            {{ result.final.confidence }}%
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+    {% endif %}
+
   </div>
 
-  {% if result %}
-    <div class="box ml">
-      <h3>🤖 ML model</h3>
-      <p>Prediction: <span class="{{ 'real' if result.ml_label=='REAL' else 'fake' }}">{{ result.ml_label }}</span>
-      {% if result.ml_confidence is not none %} — confidence: {{ (result.ml_confidence * 100) | round(1) }}%{% endif %}</p>
-    </div>
+  <footer>FakeShield · ML + Semantic + Wikipedia + FactCheck · auto-refresh 60s</footer>
 
-    <div class="box verify">
-      <h3>🛡️ Semantic cross-check (news archive)</h3>
-      <p>{{ result.verify_msg }}</p>
-      {% if result.verify_detail and result.verify_detail.status == 'ok' %}
-        <p><a href="{{ result.verify_detail.best_url }}" target="_blank">Open source article</a></p>
-      {% endif %}
-    </div>
-
-    <div class="box final">
-      <h3>🔎 Final verdict</h3>
-      <p><strong>{{ result.final.verdict }}</strong>
-      {% if result.final.confidence is not none %} — combined/confidence: {{ (result.final.confidence * 100) | round(1) }}%{% endif %}</p>
-    </div>
-  {% endif %}
 </body>
 </html>
